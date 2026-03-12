@@ -1,0 +1,357 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MCP Tools for Todo Chatbot",
+  "description": "Model Context Protocol tool definitions for task management operations. These tools are exposed by the MCP server and called by the OpenAI agent.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "add_task",
+      "description": "Create a new task for the user. Call this when the user wants to add, create, or remember something they need to do.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["user_id", "title"],
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "User identifier (must match authenticated user)",
+            "example": "auth0|123456789"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Short description of the task (what needs to be done)",
+            "example": "Buy groceries"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Optional additional details or notes about the task",
+            "example": "Milk, eggs, bread, and organic vegetables"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["task_id", "title", "created_at"],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the created task",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "title": {
+            "type": "string",
+            "description": "Task title (as stored)",
+            "example": "Buy groceries"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the task was created (UTC)",
+            "example": "2026-01-03T10:30:00Z"
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "VALIDATION_ERROR",
+          "message": "Title cannot be empty"
+        },
+        {
+          "code": "UNAUTHORIZED",
+          "message": "Invalid user_id"
+        },
+        {
+          "code": "DATABASE_ERROR",
+          "message": "Failed to create task"
+        }
+      ]
+    },
+    {
+      "name": "list_tasks",
+      "description": "Retrieve all tasks for the user, optionally filtered by completion status. Call this when the user wants to see, show, list, or view their tasks.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["user_id"],
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "User identifier (must match authenticated user)",
+            "example": "auth0|123456789"
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Optional filter: true=only completed tasks, false=only pending tasks, omit=all tasks",
+            "example": false
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["tasks"],
+        "properties": {
+          "tasks": {
+            "type": "array",
+            "description": "List of tasks matching the filter",
+            "items": {
+              "type": "object",
+              "required": ["task_id", "title", "completed", "created_at"],
+              "properties": {
+                "task_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "title": {
+                  "type": "string",
+                  "example": "Buy groceries"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true,
+                  "example": "Milk, eggs, bread"
+                },
+                "completed": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-01-03T10:30:00Z"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-01-03T10:30:00Z"
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "UNAUTHORIZED",
+          "message": "Invalid user_id"
+        },
+        {
+          "code": "DATABASE_ERROR",
+          "message": "Failed to retrieve tasks"
+        }
+      ]
+    },
+    {
+      "name": "complete_task",
+      "description": "Mark a task as completed. Call this when the user says they finished, completed, or are done with a task.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["user_id", "task_id"],
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "User identifier (must match authenticated user)",
+            "example": "auth0|123456789"
+          },
+          "task_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier of the task to complete",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["task_id", "completed", "updated_at"],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the completed task",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Completion status (always true after this operation)",
+            "example": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the task was marked complete (UTC)",
+            "example": "2026-01-03T11:00:00Z"
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "NOT_FOUND",
+          "message": "Task not found or does not belong to user"
+        },
+        {
+          "code": "ALREADY_COMPLETED",
+          "message": "Task is already completed"
+        },
+        {
+          "code": "UNAUTHORIZED",
+          "message": "Invalid user_id or task ownership"
+        },
+        {
+          "code": "DATABASE_ERROR",
+          "message": "Failed to update task"
+        }
+      ]
+    },
+    {
+      "name": "update_task",
+      "description": "Update the title or description of an existing task. Call this when the user wants to change, edit, or modify task details.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["user_id", "task_id"],
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "User identifier (must match authenticated user)",
+            "example": "auth0|123456789"
+          },
+          "task_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier of the task to update",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "New task title (optional - only if changing title)",
+            "example": "Buy organic groceries"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "nullable": true,
+            "description": "New task description (optional - only if changing description, null to clear)",
+            "example": "Focus on organic vegetables and cage-free eggs"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["task_id", "updated_fields", "updated_at"],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the updated task",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "updated_fields": {
+            "type": "object",
+            "description": "Map of fields that were updated",
+            "properties": {
+              "title": {
+                "type": "string",
+                "example": "Buy organic groceries"
+              },
+              "description": {
+                "type": "string",
+                "nullable": true,
+                "example": "Focus on organic vegetables"
+              }
+            }
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the task was updated (UTC)",
+            "example": "2026-01-03T11:15:00Z"
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "NOT_FOUND",
+          "message": "Task not found or does not belong to user"
+        },
+        {
+          "code": "VALIDATION_ERROR",
+          "message": "At least one field (title or description) must be provided"
+        },
+        {
+          "code": "VALIDATION_ERROR",
+          "message": "Title cannot be empty"
+        },
+        {
+          "code": "UNAUTHORIZED",
+          "message": "Invalid user_id or task ownership"
+        },
+        {
+          "code": "DATABASE_ERROR",
+          "message": "Failed to update task"
+        }
+      ]
+    },
+    {
+      "name": "delete_task",
+      "description": "Permanently delete a task. Call this when the user wants to remove or delete a task.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["user_id", "task_id"],
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "User identifier (must match authenticated user)",
+            "example": "auth0|123456789"
+          },
+          "task_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier of the task to delete",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["success", "task_id"],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the deletion was successful",
+            "example": true
+          },
+          "task_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the deleted task",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": "NOT_FOUND",
+          "message": "Task not found or does not belong to user"
+        },
+        {
+          "code": "UNAUTHORIZED",
+          "message": "Invalid user_id or task ownership"
+        },
+        {
+          "code": "DATABASE_ERROR",
+          "message": "Failed to delete task"
+        }
+      ]
+    }
+  ],
+  "notes": {
+    "security": "All tools validate that user_id matches the authenticated user and that the user owns the resource (task) being operated on.",
+    "idempotency": "complete_task and delete_task are idempotent - calling multiple times with same parameters produces same result.",
+    "error_handling": "Tools return structured errors with codes. The AI agent should translate these into user-friendly natural language responses.",
+    "performance": "All tools include database indexes on user_id for fast filtering. Expected response time < 100ms for simple queries."
+  }
+}

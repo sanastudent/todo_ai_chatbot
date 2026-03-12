@@ -1,0 +1,37 @@
+{
+  "name": "todo-ai-chatbot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Todo AI Chatbot with enhanced task management features",
+  "scripts": {
+    "dev": "concurrently \"npm run backend\" \"npm run frontend:wait\"",
+    "backend": "cd backend && python run_server.py",
+    "frontend": "cd frontend && npm run dev",
+    "frontend:wait": "python ../scripts/health-check.py npm run frontend",
+    "dev:backend": "cd backend && python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:mcp": "cd backend && python -m src.mcp.server",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:frontend:wait": "python ../scripts/health-check.py npm run dev:frontend",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend:wait\"",
+    "start:backend": "cd backend && python -m uvicorn src.main:app --host 0.0.0.0 --port 8000",
+    "start:mcp": "cd backend && python -m src.mcp.server",
+    "start:frontend": "cd frontend && npm run preview",
+    "start:frontend:wait": "python ../scripts/health-check.py npm run start:frontend",
+    "sync-start": "node ../scripts/health-check.js npm run dev",
+    "build": "cd frontend && npm run build",
+    "test": "cd backend && python -m pytest",
+    "mcp": "cd backend && python -m src.mcp.server"
+  },
+  "keywords": ["todo", "chatbot", "ai", "productivity"],
+  "author": "Specify Dev",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "workspaces": [
+    "frontend"
+  ]
+}

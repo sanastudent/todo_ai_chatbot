@@ -1,0 +1,547 @@
+# API Contract: Todo AI Chatbot Enhanced MCP Tools
+
+## Overview
+This document defines the API contracts for the enhanced MCP tools that support priority levels, tagging system, search functionality, filtering capabilities, and sorting options.
+
+## Updated MCP Tool Specifications
+
+### 1. add_task (Enhanced)
+
+#### Description
+Create a new task for the user with optional priority and tags.
+
+#### Input Parameters
+```json
+{
+  "user_id": {
+    "type": "string",
+    "required": true,
+    "description": "User identifier (must match authenticated user)",
+    "validation": {
+      "min_length": 1,
+      "max_length": 255
+    }
+  },
+  "title": {
+    "type": "string",
+    "required": true,
+    "description": "Short description of the task (what needs to be done)",
+    "validation": {
+      "min_length": 1,
+      "max_length": 200
+    }
+  },
+  "description": {
+    "type": "string",
+    "required": false,
+    "description": "Optional additional details or notes about the task",
+    "validation": {
+      "max_length": 2000
+    }
+  },
+  "priority": {
+    "type": "string",
+    "required": false,
+    "description": "Priority level of the task",
+    "default": "medium",
+    "enum": ["high", "medium", "low"],
+    "validation": {
+      "enum_values": ["high", "medium", "low"]
+    }
+  },
+  "tags": {
+    "type": "array",
+    "items": {
+      "type": "string"
+    },
+    "required": false,
+    "description": "Array of tag strings for categorization",
+    "default": [],
+    "validation": {
+      "max_items": 10,
+      "item_min_length": 1,
+      "item_max_length": 50,
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    }
+  }
+}
+```
+
+#### Output Response
+```json
+{
+  "type": "object",
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "description": "Unique identifier of the created task"
+    },
+    "title": {
+      "type": "string",
+      "description": "Title of the created task"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the task was created"
+    },
+    "was_duplicate": {
+      "type": "boolean",
+      "description": "Indicates if the task already existed and was returned instead of created"
+    }
+  },
+  "required": ["task_id", "title", "created_at", "was_duplicate"]
+}
+```
+
+#### Error Responses
+- `400 Bad Request`: Invalid input parameters
+- `401 Unauthorized`: Invalid user_id
+- `500 Internal Server Error`: Database operation failed
+
+---
+
+### 2. list_tasks (Enhanced)
+
+#### Description
+Retrieve all tasks for the user with optional filtering, searching, and sorting capabilities.
+
+#### Input Parameters
+```json
+{
+  "user_id": {
+    "type": "string",
+    "required": true,
+    "description": "User identifier (must match authenticated user)",
+    "validation": {
+      "min_length": 1,
+      "max_length": 255
+    }
+  },
+  "completed": {
+    "type": "boolean",
+    "required": false,
+    "description": "Filter by completion status: true=only completed, false=only pending, omit=all tasks"
+  },
+  "priority": {
+    "type": "array",
+    "items": {
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "required": false,
+    "description": "Filter by priority level(s)",
+    "validation": {
+      "max_items": 3
+    }
+  },
+  "tags": {
+    "type": "array",
+    "items": {
+      "type": "string"
+    },
+    "required": false,
+    "description": "Filter by tag(s) - returns tasks containing ANY of the specified tags",
+    "validation": {
+      "max_items": 10,
+      "item_min_length": 1,
+      "item_max_length": 50,
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    }
+  },
+  "search_term": {
+    "type": "string",
+    "required": false,
+    "description": "Keyword to search in task title, description, or tags",
+    "validation": {
+      "min_length": 1,
+      "max_length": 200
+    }
+  },
+  "date_from": {
+    "type": "string",
+    "format": "date-time",
+    "required": false,
+    "description": "Filter tasks created after this date"
+  },
+  "date_to": {
+    "type": "string",
+    "format": "date-time",
+    "required": false,
+    "description": "Filter tasks created before this date"
+  },
+  "sort_by": {
+    "type": "string",
+    "required": false,
+    "description": "Field to sort by",
+    "default": "created_at",
+    "enum": ["created_at", "priority", "title", "completed"],
+    "validation": {
+      "enum_values": ["created_at", "priority", "title", "completed"]
+    }
+  },
+  "sort_order": {
+    "type": "string",
+    "required": false,
+    "description": "Sort order",
+    "default": "desc",
+    "enum": ["asc", "desc"],
+    "validation": {
+      "enum_values": ["asc", "desc"]
+    }
+  },
+  "limit": {
+    "type": "integer",
+    "required": false,
+    "description": "Maximum number of tasks to return",
+    "default": 50,
+    "validation": {
+      "minimum": 1,
+      "maximum": 100
+    }
+  },
+  "offset": {
+    "type": "integer",
+    "required": false,
+    "description": "Number of tasks to skip for pagination",
+    "default": 0,
+    "validation": {
+      "minimum": 0
+    }
+  }
+}
+```
+
+#### Output Response
+```json
+{
+  "type": "object",
+  "properties": {
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "description": "Unique identifier of the task"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the task"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description of the task"
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Whether the task is completed"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Priority level of the task"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of tags associated with the task"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the task was created"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the task was last updated"
+          }
+        },
+        "required": ["task_id", "title", "completed", "priority", "tags", "created_at"]
+      },
+      "description": "Array of tasks matching the criteria"
+    },
+    "total_count": {
+      "type": "integer",
+      "description": "Total number of tasks matching the criteria (for pagination)"
+    },
+    "filtered_by": {
+      "type": "object",
+      "description": "Filters that were applied to the results",
+      "properties": {
+        "priority": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "tags": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "search_term": {"type": "string"},
+        "completed": {"type": "boolean"}
+      }
+    }
+  },
+  "required": ["tasks", "total_count"]
+}
+```
+
+#### Error Responses
+- `400 Bad Request`: Invalid input parameters
+- `401 Unauthorized`: Invalid user_id
+- `500 Internal Server Error`: Database operation failed
+
+---
+
+### 3. complete_task (Unchanged)
+
+#### Description
+Mark a task as completed.
+
+#### Input Parameters
+```json
+{
+  "user_id": {
+    "type": "string",
+    "required": true,
+    "description": "User identifier (must match authenticated user)",
+    "validation": {
+      "min_length": 1,
+      "max_length": 255
+    }
+  },
+  "task_id": {
+    "type": "string",
+    "required": true,
+    "description": "Unique identifier of the task to complete",
+    "validation": {
+      "min_length": 1,
+      "max_length": 255
+    }
+  }
+}
+```
+
+#### Output Response
+```json
+{
+  "type": "object",
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "description": "Unique identifier of the completed task"
+    },
+    "completed": {
+      "type": "boolean",
+      "description": "Boolean indicating the task is now completed"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the task was updated to completed status"
+    }
+  },
+  "required": ["task_id", "completed", "updated_at"]
+}
+```
+
+#### Error Responses
+- `400 Bad Request`: Invalid input parameters
+- `401 Unauthorized`: Invalid user_id or task doesn't belong to user
+- `404 Not Found`: Task not found
+- `500 Internal Server Error`: Database operation failed
+
+---
+
+### 4. update_task (Enhanced)
+
+#### Description
+Update the title, description, priority, or tags of an existing task.
+
+#### Input Parameters
+```json
+{
+  "user_id": {
+    "type": "string",
+    "required": true,
+    "description": "User identifier (must match authenticated user)",
+    "validation": {
+      "min_length": 1,
+      "max_length": 255
+    }
+  },
+  "task_id": {
+    "type": "string",
+    "required": true,
+    "description": "Unique identifier of the task to update",
+    "validation": {
+      "min_length": 1,
+      "max_length": 255
+    }
+  },
+  "title": {
+    "type": "string",
+    "required": false,
+    "description": "New task title (optional - only if changing title)",
+    "validation": {
+      "min_length": 1,
+      "max_length": 200
+    }
+  },
+  "description": {
+    "type": "string",
+    "required": false,
+    "description": "New task description (optional - only if changing description, null to clear)",
+    "validation": {
+      "max_length": 2000
+    }
+  },
+  "priority": {
+    "type": "string",
+    "required": false,
+    "description": "New priority level for the task",
+    "enum": ["high", "medium", "low"],
+    "validation": {
+      "enum_values": ["high", "medium", "low"]
+    }
+  },
+  "tags": {
+    "type": "array",
+    "items": {
+      "type": "string"
+    },
+    "required": false,
+    "description": "New array of tags for the task (completely replaces existing tags)",
+    "validation": {
+      "max_items": 10,
+      "item_min_length": 1,
+      "item_max_length": 50,
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    }
+  }
+}
+```
+
+#### Output Response
+```json
+{
+  "type": "object",
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "description": "Unique identifier of the updated task"
+    },
+    "updated_fields": {
+      "type": "object",
+      "description": "Object containing the fields that were updated",
+      "properties": {
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "priority": {"type": "string"},
+        "tags": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the task was last updated"
+    }
+  },
+  "required": ["task_id", "updated_fields", "updated_at"]
+}
+```
+
+#### Error Responses
+- `400 Bad Request`: Invalid input parameters or no fields provided for update
+- `401 Unauthorized`: Invalid user_id or task doesn't belong to user
+- `404 Not Found`: Task not found
+- `500 Internal Server Error`: Database operation failed
+
+---
+
+### 5. delete_task (Unchanged)
+
+#### Description
+Permanently delete a task.
+
+#### Input Parameters
+```json
+{
+  "user_id": {
+    "type": "string",
+    "required": true,
+    "description": "User identifier (must match authenticated user)",
+    "validation": {
+      "min_length": 1,
+      "max_length": 255
+    }
+  },
+  "task_id": {
+    "type": "string",
+    "required": true,
+    "description": "Unique identifier of the task to delete",
+    "validation": {
+      "min_length": 1,
+      "max_length": 255
+    }
+  }
+}
+```
+
+#### Output Response
+```json
+{
+  "type": "object",
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "description": "Indicates whether the deletion was successful"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "Unique identifier of the deleted task"
+    }
+  },
+  "required": ["success", "task_id"]
+}
+```
+
+#### Error Responses
+- `400 Bad Request`: Invalid input parameters
+- `401 Unauthorized`: Invalid user_id or task doesn't belong to user
+- `404 Not Found`: Task not found
+- `500 Internal Server Error`: Database operation failed
+
+## Backward Compatibility
+
+All existing functionality is preserved:
+- All original MCP tools remain available with their original signatures
+- New optional parameters have sensible defaults
+- Existing clients will continue to work without modification
+- Response formats maintain backward compatibility
+
+## Performance Requirements
+
+- `add_task`: Response time < 100ms
+- `list_tasks`: Response time < 2s for searches up to 1000 tasks
+- `complete_task`: Response time < 100ms
+- `update_task`: Response time < 100ms
+- `delete_task`: Response time < 100ms
+
+## Security Requirements
+
+- User isolation: Users can only access/modify their own tasks
+- Input validation: All parameters validated before processing
+- SQL injection prevention: All queries use parameterized statements
+- Rate limiting: Appropriate rate limits to prevent abuse

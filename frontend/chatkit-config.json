@@ -1,0 +1,6 @@
+{
+  "apiUrl": "http://localhost:8001/api/{userId}/chat",
+  "allowedDomains": ["localhost:8001"],
+  "theme": "light",
+  "initialMessage": "Hello! I'm your AI assistant. You can ask me to add tasks, list tasks, complete tasks, and more. Try saying 'Add task to buy groceries'!"
+}

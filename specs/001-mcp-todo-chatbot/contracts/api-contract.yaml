@@ -1,0 +1,264 @@
+openapi: 3.1.0
+info:
+  title: MCP Todo Chatbot API
+  description: |
+    REST API for AI-powered todo management chatbot.
+
+    **Key Features**:
+    - Natural language task management via chat interface
+    - Stateless design with conversation persistence
+    - Multi-tenant with strict user data isolation
+    - OpenAI Agents SDK integration with MCP tools
+
+    **Authentication**: All endpoints require Bearer JWT token from Better Auth.
+
+  version: 1.0.0
+  contact:
+    name: API Support
+    url: https://github.com/yourusername/todo-ai-chatbot
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: https://api.todo-chatbot.example.com
+    description: Production
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/{user_id}/chat:
+    post:
+      summary: Send chat message and get AI response
+      description: |
+        Stateless chat endpoint that:
+        1. Validates user authentication
+        2. Loads conversation history from database
+        3. Creates new conversation if needed
+        4. Persists user message
+        5. Invokes AI agent with MCP tools
+        6. Persists AI response
+        7. Returns response to client
+
+        **Conversation Management**:
+        - If `conversation_id` provided in request: load existing conversation
+        - If `conversation_id` omitted: create new conversation
+        - Always returns `conversation_id` in response for subsequent messages
+
+        **Error Handling**:
+        - 401: Invalid/missing authentication token
+        - 403: user_id in URL doesn't match authenticated user
+        - 404: conversation_id not found or doesn't belong to user
+        - 500: Internal server error (database/AI failure)
+
+      operationId: sendChatMessage
+      tags:
+        - Chat
+
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User identifier from Better Auth (must match authenticated user)
+          schema:
+            type: string
+            example: "auth0|123456789"
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              newConversation:
+                summary: Start new conversation
+                value:
+                  message: "Add task to buy groceries"
+              existingConversation:
+                summary: Continue existing conversation
+                value:
+                  message: "Show my pending tasks"
+                  conversation_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+
+      responses:
+        '200':
+          description: Successful response from AI
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              examples:
+                taskAdded:
+                  summary: Task successfully added
+                  value:
+                    response: "I've added 'buy groceries' to your tasks."
+                    conversation_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                    message_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                taskList:
+                  summary: Task list retrieved
+                  value:
+                    response: "You have 3 pending tasks:\n1. Buy groceries\n2. Call doctor\n3. Finish report"
+                    conversation_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                    message_id: "8ea93b28-9c1f-48a2-a3b7-5d8e7f4c9d2a"
+
+        '400':
+          description: Bad request (missing/invalid parameters)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Message cannot be empty"
+                conversation_id: null
+
+        '401':
+          description: Unauthorized (missing/invalid authentication token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Invalid or missing authentication token"
+                conversation_id: null
+
+        '403':
+          description: Forbidden (user_id mismatch)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Access denied: user_id mismatch"
+                conversation_id: null
+
+        '404':
+          description: Not found (conversation_id doesn't exist or doesn't belong to user)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Conversation not found"
+                conversation_id: null
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "An error occurred while processing your request. Please try again."
+                conversation_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns service health status (for orchestration/monitoring)
+      operationId: healthCheck
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy]
+                  timestamp:
+                    type: string
+                    format: date-time
+              example:
+                status: "healthy"
+                timestamp: "2026-01-03T10:30:00Z"
+
+components:
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: User's natural language message
+          example: "Add task to buy groceries"
+
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: |
+            Optional conversation ID to continue existing conversation.
+            If omitted, a new conversation will be created.
+          example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+
+    ChatResponse:
+      type: object
+      required:
+        - response
+        - conversation_id
+        - message_id
+      properties:
+        response:
+          type: string
+          description: AI assistant's natural language response
+          example: "I've added 'buy groceries' to your tasks."
+
+        conversation_id:
+          type: string
+          format: uuid
+          description: Conversation ID (for subsequent messages)
+          example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+
+        message_id:
+          type: string
+          format: uuid
+          description: Unique ID of the assistant's message
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: User-friendly error message
+          example: "An error occurred while processing your request."
+
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Conversation ID (if available)
+          example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token from Better Auth.
+
+        **Usage**: Include in Authorization header:
+        ```
+        Authorization: Bearer <token>
+        ```
+
+        Token must contain `user_id` claim matching `{user_id}` in request path.
+
+tags:
+  - name: Chat
+    description: Chat conversation endpoints
+  - name: System
+    description: System health and monitoring endpoints

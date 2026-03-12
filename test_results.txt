@@ -1,0 +1,27 @@
+[SUCCESS] Backend health check passed: {'status': 'healthy', 'timestamp': '2026-01-08T16:50:20.196913', 'database': 'connected'}
+
+=== TESTING ADD TASK ===
+[SUCCESS] Add task response: 'buy groceries' is already in your tasks.
+
+=== TESTING ADD TASK WITH DESCRIPTION ===
+[SUCCESS] Add task with description response: 'walk the dog with description Take the golden retriever for a 30 minute walk' is already in your tasks.
+
+=== TESTING LIST TASKS ===
+Traceback (most recent call last):
+  File "C:\Users\User\Desktop\todo-ai-chatbot\test_comprehensive.py", line 212, in <module>
+    asyncio.run(test_chatbot_comprehensive())
+  File "C:\Users\User\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\User\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\User\Desktop\todo-ai-chatbot\test_comprehensive.py", line 71, in test_chatbot_comprehensive
+    print(f"[SUCCESS] List tasks response: {result['response']}")
+  File "C:\Users\User\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 55: character maps to <undefined>

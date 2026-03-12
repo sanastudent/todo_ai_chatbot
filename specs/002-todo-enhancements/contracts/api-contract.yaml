@@ -1,0 +1,459 @@
+openapi: 3.0.0
+info:
+  title: Todo AI Chatbot Enhanced MCP Tools API
+  description: API specification for the enhanced MCP tools that support priority levels, tagging system, search functionality, filtering capabilities, and sorting options.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+paths:
+  /mcp/tools/add_task:
+    post:
+      summary: Add a new task with optional priority and tags
+      description: Create a new task for the user with optional priority and tags.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddTaskRequest'
+      responses:
+        '200':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddTaskResponse'
+        '400':
+          description: Invalid input parameters
+        '401':
+          description: Unauthorized access
+        '500':
+          description: Internal server error
+
+  /mcp/tools/list_tasks:
+    post:
+      summary: List tasks with filtering, searching, and sorting
+      description: Retrieve all tasks for the user with optional filtering, searching, and sorting capabilities.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListTasksRequest'
+      responses:
+        '200':
+          description: Tasks retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTasksResponse'
+        '400':
+          description: Invalid input parameters
+        '401':
+          description: Unauthorized access
+        '500':
+          description: Internal server error
+
+  /mcp/tools/complete_task:
+    post:
+      summary: Mark a task as completed
+      description: Mark a task as completed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteTaskRequest'
+      responses:
+        '200':
+          description: Task completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompleteTaskResponse'
+        '400':
+          description: Invalid input parameters
+        '401':
+          description: Unauthorized access
+        '404':
+          description: Task not found
+        '500':
+          description: Internal server error
+
+  /mcp/tools/update_task:
+    post:
+      summary: Update task properties
+      description: Update the title, description, priority, or tags of an existing task.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateTaskResponse'
+        '400':
+          description: Invalid input parameters
+        '401':
+          description: Unauthorized access
+        '404':
+          description: Task not found
+        '500':
+          description: Internal server error
+
+  /mcp/tools/delete_task:
+    post:
+      summary: Delete a task
+      description: Permanently delete a task.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteTaskRequest'
+      responses:
+        '200':
+          description: Task deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteTaskResponse'
+        '400':
+          description: Invalid input parameters
+        '401':
+          description: Unauthorized access
+        '404':
+          description: Task not found
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    AddTaskRequest:
+      type: object
+      required:
+        - user_id
+        - title
+      properties:
+        user_id:
+          type: string
+          description: User identifier (must match authenticated user)
+          minLength: 1
+          maxLength: 255
+        title:
+          type: string
+          description: Short description of the task (what needs to be done)
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          description: Optional additional details or notes about the task
+          maxLength: 2000
+        priority:
+          type: string
+          description: Priority level of the task
+          enum: [high, medium, low]
+          default: medium
+        tags:
+          type: array
+          items:
+            type: string
+          description: Array of tag strings for categorization
+          maxItems: 10
+          default: []
+
+    AddTaskResponse:
+      type: object
+      required:
+        - task_id
+        - title
+        - created_at
+        - was_duplicate
+      properties:
+        task_id:
+          type: string
+          description: Unique identifier of the created task
+        title:
+          type: string
+          description: Title of the created task
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the task was created
+        was_duplicate:
+          type: boolean
+          description: Indicates if the task already existed and was returned instead of created
+
+    ListTasksRequest:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+          description: User identifier (must match authenticated user)
+          minLength: 1
+          maxLength: 255
+        completed:
+          type: boolean
+          description: Filter by completion status: true=only completed, false=only pending, omit=all tasks
+        priority:
+          type: array
+          items:
+            type: string
+            enum: [high, medium, low]
+          description: Filter by priority level(s)
+          maxItems: 3
+        tags:
+          type: array
+          items:
+            type: string
+          description: Filter by tag(s) - returns tasks containing ANY of the specified tags
+          maxItems: 10
+        search_term:
+          type: string
+          description: Keyword to search in task title, description, or tags
+          minLength: 1
+          maxLength: 200
+        date_from:
+          type: string
+          format: date-time
+          description: Filter tasks created after this date
+        date_to:
+          type: string
+          format: date-time
+          description: Filter tasks created before this date
+        sort_by:
+          type: string
+          description: Field to sort by
+          enum: [created_at, priority, title, completed]
+          default: created_at
+        sort_order:
+          type: string
+          description: Sort order
+          enum: [asc, desc]
+          default: desc
+        limit:
+          type: integer
+          description: Maximum number of tasks to return
+          minimum: 1
+          maximum: 100
+          default: 50
+        offset:
+          type: integer
+          description: Number of tasks to skip for pagination
+          minimum: 0
+          default: 0
+
+    ListTasksResponse:
+      type: object
+      required:
+        - tasks
+        - total_count
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        total_count:
+          type: integer
+          description: Total number of tasks matching the criteria (for pagination)
+        filtered_by:
+          type: object
+          description: Filters that were applied to the results
+          properties:
+            priority:
+              type: array
+              items:
+                type: string
+            tags:
+              type: array
+              items:
+                type: string
+            search_term:
+              type: string
+            completed:
+              type: boolean
+
+    CompleteTaskRequest:
+      type: object
+      required:
+        - user_id
+        - task_id
+      properties:
+        user_id:
+          type: string
+          description: User identifier (must match authenticated user)
+          minLength: 1
+          maxLength: 255
+        task_id:
+          type: string
+          description: Unique identifier of the task to complete
+          minLength: 1
+          maxLength: 255
+
+    CompleteTaskResponse:
+      type: object
+      required:
+        - task_id
+        - completed
+        - updated_at
+      properties:
+        task_id:
+          type: string
+          description: Unique identifier of the completed task
+        completed:
+          type: boolean
+          description: Boolean indicating the task is now completed
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the task was updated to completed status
+
+    UpdateTaskRequest:
+      type: object
+      required:
+        - user_id
+        - task_id
+      properties:
+        user_id:
+          type: string
+          description: User identifier (must match authenticated user)
+          minLength: 1
+          maxLength: 255
+        task_id:
+          type: string
+          description: Unique identifier of the task to update
+          minLength: 1
+          maxLength: 255
+        title:
+          type: string
+          description: New task title (optional - only if changing title)
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          description: New task description (optional - only if changing description, null to clear)
+          maxLength: 2000
+        priority:
+          type: string
+          description: New priority level for the task
+          enum: [high, medium, low]
+        tags:
+          type: array
+          items:
+            type: string
+          description: New array of tags for the task (completely replaces existing tags)
+          maxItems: 10
+
+    UpdateTaskResponse:
+      type: object
+      required:
+        - task_id
+        - updated_fields
+        - updated_at
+      properties:
+        task_id:
+          type: string
+          description: Unique identifier of the updated task
+        updated_fields:
+          type: object
+          description: Object containing the fields that were updated
+          properties:
+            title:
+              type: string
+            description:
+              type: string
+            priority:
+              type: string
+            tags:
+              type: array
+              items:
+                type: string
+            updated_at:
+              type: string
+              format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the task was last updated
+
+    DeleteTaskRequest:
+      type: object
+      required:
+        - user_id
+        - task_id
+      properties:
+        user_id:
+          type: string
+          description: User identifier (must match authenticated user)
+          minLength: 1
+          maxLength: 255
+        task_id:
+          type: string
+          description: Unique identifier of the task to delete
+          minLength: 1
+          maxLength: 255
+
+    DeleteTaskResponse:
+      type: object
+      required:
+        - success
+        - task_id
+      properties:
+        success:
+          type: boolean
+          description: Indicates whether the deletion was successful
+        task_id:
+          type: string
+          description: Unique identifier of the deleted task
+
+    Task:
+      type: object
+      required:
+        - task_id
+        - title
+        - completed
+        - priority
+        - tags
+        - created_at
+      properties:
+        task_id:
+          type: string
+          description: Unique identifier of the task
+        user_id:
+          type: string
+          description: User identifier
+        title:
+          type: string
+          description: Title of the task
+        description:
+          type: string
+          description: Optional description of the task
+        completed:
+          type: boolean
+          description: Whether the task is completed
+        priority:
+          type: string
+          enum: [high, medium, low]
+          description: Priority level of the task
+        tags:
+          type: array
+          items:
+            type: string
+          description: Array of tags associated with the task
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the task was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the task was last updated
