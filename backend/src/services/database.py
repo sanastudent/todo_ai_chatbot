@@ -8,6 +8,11 @@ from contextlib import asynccontextmanager
 
 # Get database URL from environment, with a fallback to SQLite for development
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./todo_chatbot_dev.db")
+
+# Neon (and most providers) give plain postgresql:// — convert for asyncpg async driver
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
 # For sync operations like Alembic migrations
 if DATABASE_URL.startswith("postgresql+asyncpg://"):
     SYNC_DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
